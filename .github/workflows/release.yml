@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-13, macos-latest, windows-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -56,7 +56,11 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           cd dist
-          zip -r ClipMark-macOS-${{ github.ref_name }}.zip ClipMark.app
+          if [ "${{ matrix.os }}" = "macos-13" ]; then
+            zip -r ClipMark-macOS-x86_64-${{ github.ref_name }}.zip ClipMark.app
+          else
+            zip -r ClipMark-macOS-arm64-${{ github.ref_name }}.zip ClipMark.app
+          fi
 
       - name: Create archive (Windows)
         if: runner.os == 'Windows'
@@ -75,7 +79,13 @@ jobs:
         shell: bash
         run: |
           case "${{ runner.os }}" in
-            macOS)  echo "path=dist/ClipMark-macOS-${{ github.ref_name }}.zip" >> "$GITHUB_OUTPUT" ;;
+            macOS)
+              if [ "${{ matrix.os }}" = "macos-13" ]; then
+                echo "path=dist/ClipMark-macOS-x86_64-${{ github.ref_name }}.zip" >> "$GITHUB_OUTPUT"
+              else
+                echo "path=dist/ClipMark-macOS-arm64-${{ github.ref_name }}.zip" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
             Windows) echo "path=dist/ClipMark-Windows-${{ github.ref_name }}.zip" >> "$GITHUB_OUTPUT" ;;
             Linux)  echo "path=dist/ClipMark-Linux-${{ github.ref_name }}.tar.gz" >> "$GITHUB_OUTPUT" ;;
           esac

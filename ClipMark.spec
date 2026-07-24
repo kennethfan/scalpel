@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+import sys
 
 
 a = Analysis(
@@ -33,6 +34,7 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+# One-dir: EXE without embedded binaries, COLLECT gathers everything
 exe = EXE(
     pyz,
     a.scripts,
@@ -59,9 +61,12 @@ coll = COLLECT(
     upx_exclude=[],
     name='ClipMark',
 )
-app = BUNDLE(
-    coll,
-    name='ClipMark.app',
-    icon=None,
-    bundle_identifier='com.clipmark.app',
-)
+
+# macOS: wrap the folder into .app bundle
+if sys.platform == 'darwin':
+    app = BUNDLE(
+        coll,
+        name='ClipMark.app',
+        icon=None,
+        bundle_identifier='com.clipmark.app',
+    )

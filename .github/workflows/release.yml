@@ -10,7 +10,13 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -19,19 +25,60 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libegl1 \
+            libglib2.0-0 \
+            libxkbcommon-x11-0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-xinerama0 \
+            libxcb-xkb1 \
+            libxcb-xv0
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
           pip install -e .
 
-      - name: Build .app bundle
+      - name: Build package
         run: pyinstaller ClipMark.spec
 
-      - name: Create archive
+      - name: Create archive (macOS)
+        if: runner.os == 'macOS'
         run: |
           cd dist
           zip -r ClipMark-macOS-${{ github.ref_name }}.zip ClipMark.app
+
+      - name: Create archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\ClipMark -DestinationPath dist\ClipMark-Windows-${{ github.ref_name }}.zip
+
+      - name: Create archive (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cd dist
+          tar czf ClipMark-Linux-${{ github.ref_name }}.tar.gz ClipMark
+
+      - name: Determine artifact path
+        id: artifact
+        shell: bash
+        run: |
+          case "${{ runner.os }}" in
+            macOS)  echo "path=dist/ClipMark-macOS-${{ github.ref_name }}.zip" >> "$GITHUB_OUTPUT" ;;
+            Windows) echo "path=dist/ClipMark-Windows-${{ github.ref_name }}.zip" >> "$GITHUB_OUTPUT" ;;
+            Linux)  echo "path=dist/ClipMark-Linux-${{ github.ref_name }}.tar.gz" >> "$GITHUB_OUTPUT" ;;
+          esac
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -39,4 +86,4 @@ jobs:
           name: ClipMark ${{ github.ref_name }}
           body_path: CHANGELOG.md
           fail_on_unmatched_files: false
-          files: dist/ClipMark-macOS-${{ github.ref_name }}.zip
+          files: ${{ steps.artifact.outputs.path }}

@@ -95,7 +95,8 @@ def load_config() -> dict:
     cfg = _load_config_raw()
     api_key = _load_api_key()
     if api_key:
-        cfg.setdefault("ai", {})["api_key"] = api_key
+        cfg.setdefault("ai", {}).pop("_api_key_b64", None)
+        cfg["ai"]["api_key"] = api_key
     return cfg
 
 

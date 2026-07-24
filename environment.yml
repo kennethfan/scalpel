@@ -1,0 +1,12 @@
+name: clipmark
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+    - PyQt5<5.16
+    - pydantic>=2.0
+    - openai>=1.0
+    - edge-tts>=6.0
+    - pytest>=8.0

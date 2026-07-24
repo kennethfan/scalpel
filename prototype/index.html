@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipMark — UI Prototype</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════
+     GLOBAL STYLES
+     ══════════════════════════════════════════════════════════════ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif; background: #1a1a2e; color: #e0e0e0; overflow: hidden; height: 100vh; }
+  button { cursor: pointer; font-family: inherit; border: none; outline: none; }
+  input, textarea { font-family: inherit; outline: none; }
+
+  /* ══════════════════════════════════════════════════════════════
+     VARIANT CONTAINERS
+     ══════════════════════════════════════════════════════════════ */
+  .variant { display: none; width: 100%; height: 100vh; }
+  .variant.active { display: flex; }
+
+  /* ══════════════════════════════════════════════════════════════
+     SWITCHER BAR (shared)
+     ══════════════════════════════════════════════════════════════ */
+  .switcher { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; align-items: center; gap: 16px; background: #2d2d5e; padding: 10px 22px; border-radius: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.5); border: 1px solid #4a4a8a; }
+  .switcher button { background: none; color: #8888cc; font-size: 22px; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: .15s; }
+  .switcher button:hover { background: #3d3d7a; color: #fff; }
+  .switcher .label { color: #aaaae6; font-size: 14px; font-weight: 500; min-width: 140px; text-align: center; letter-spacing: .3px; }
+  .switcher .badge { background: #4a4a8a; color: #ccc; font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+
+  /* ══════════════════════════════════════════════════════════════
+     SHARED COMPONENT STYLES (used by multiple variants)
+     ══════════════════════════════════════════════════════════════ */
+  .mock-video { background: #0d0d1a; display: flex; align-items: center; justify-content: center; color: #444; font-size: 14px; letter-spacing: 2px; position: relative; overflow: hidden; }
+  .mock-video::before { content: "▶"; position: absolute; font-size: 48px; color: rgba(255,255,255,0.06); }
+  .timeline { width: 100%; height: 8px; background: #2a2a4a; border-radius: 4px; position: relative; cursor: pointer; }
+  .timeline .progress { height: 100%; background: #6c63ff; border-radius: 4px; width: 0%; transition: width .2s; }
+  .timeline .marker-dot { position: absolute; top: -4px; width: 16px; height: 16px; border-radius: 50%; background: #ff6b6b; border: 2px solid #1a1a2e; cursor: pointer; transform: translateX(-50%); }
+
+  .btn { padding: 6px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; transition: .15s; }
+  .btn-primary { background: #6c63ff; color: #fff; }
+  .btn-primary:hover { background: #5a52e0; }
+  .btn-secondary { background: #3a3a6a; color: #ccc; }
+  .btn-secondary:hover { background: #4a4a8a; }
+  .btn-sm { padding: 4px 12px; font-size: 12px; }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .tag-green { background: #1b5e20; color: #81c784; }
+  .tag-yellow { background: #5e4a1b; color: #ffd54f; }
+  .tag-gray { background: #424242; color: #aaa; }
+
+  /* ══════════════════════════════════════════════════════════════
+     VARIANT A — Three-column layout
+     ══════════════════════════════════════════════════════════════ */
+  #variant-a { flex-direction: column; }
+  #variant-a .menu { height: 40px; background: #16163a; display: flex; align-items: center; padding: 0 20px; gap: 24px; border-bottom: 1px solid #2a2a4e; font-size: 13px; flex-shrink: 0; }
+  #variant-a .menu .logo { font-weight: 700; color: #6c63ff; font-size: 15px; }
+  #variant-a .menu .item { color: #888; }
+  #variant-a .menu .item:hover { color: #ccc; }
+  #variant-a .body { display: flex; flex: 1; overflow: hidden; }
+  #variant-a .left-pane { width: 55%; display: flex; flex-direction: column; border-right: 1px solid #2a2a4e; }
+  #variant-a .left-pane .mock-video { flex: 1; min-height: 0; }
+  #variant-a .left-pane .controls { padding: 12px 16px; display: flex; align-items: center; gap: 12px; background: #16163a; flex-shrink: 0; }
+  #variant-a .left-pane .controls .time { font-size: 12px; color: #888; font-variant-numeric: tabular-nums; }
+  #variant-a .left-pane .timeline-wrap { padding: 6px 16px 16px; flex-shrink: 0; }
+  #variant-a .right-pane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #variant-a .right-pane .toolbar { padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; background: #16163a; border-bottom: 1px solid #2a2a4e; flex-shrink: 0; }
+  #variant-a .right-pane .toolbar .count { font-size: 12px; color: #888; }
+  #variant-a .marker-table { flex: 1; overflow-y: auto; min-height: 0; }
+  #variant-a .marker-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #variant-a .marker-table th { text-align: left; padding: 8px 12px; background: #1e1e42; color: #888; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; position: sticky; top: 0; }
+  #variant-a .marker-table td { padding: 8px 12px; border-bottom: 1px solid #252548; }
+  #variant-a .marker-table tr:hover td { background: #252550; }
+  #variant-a .marker-table tr.selected td { background: #2a2a5a; }
+  #variant-a .detail-panel { background: #16163a; border-top: 1px solid #2a2a4e; padding: 12px 16px; flex-shrink: 0; }
+  #variant-a .detail-panel .row { display: flex; gap: 12px; margin-bottom: 8px; align-items: center; }
+  #variant-a .detail-panel label { font-size: 11px; color: #888; width: 50px; flex-shrink: 0; }
+  #variant-a .detail-panel input, #variant-a .detail-panel textarea { background: #1e1e42; border: 1px solid #333366; border-radius: 4px; padding: 4px 8px; color: #eee; font-size: 12px; width: 100%; }
+  #variant-a .detail-panel .ai-row { display: flex; gap: 8px; align-items: center; }
+  #variant-a .export-bar { height: 44px; background: #12122e; border-top: 1px solid #2a2a4e; display: flex; align-items: center; padding: 0 20px; gap: 16px; flex-shrink: 0; font-size: 13px; }
+  #variant-a .export-bar .progress-bar { flex: 1; height: 6px; background: #2a2a4a; border-radius: 3px; max-width: 200px; }
+  #variant-a .export-bar .progress-bar .fill { height: 100%; background: #6c63ff; border-radius: 3px; width: 0%; }
+
+  /* ══════════════════════════════════════════════════════════════
+     VARIANT B — Top-down linear workflow
+     ══════════════════════════════════════════════════════════════ */
+  #variant-b { flex-direction: column; overflow-y: auto; }
+  #variant-b .menu { height: 44px; background: #16163a; display: flex; align-items: center; padding: 0 24px; gap: 28px; border-bottom: 1px solid #2a2a4e; font-size: 13px; flex-shrink: 0; position: sticky; top: 0; z-index: 10; }
+  #variant-b .menu .logo { font-weight: 700; color: #6c63ff; font-size: 15px; }
+  #variant-b .menu .item { color: #888; }
+  #variant-b .menu .item.active { color: #6c63ff; border-bottom: 2px solid #6c63ff; padding-bottom: 12px; }
+  #variant-b .section { padding: 20px 24px; border-bottom: 1px solid #2a2a4e; flex-shrink: 0; }
+  #variant-b .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  #variant-b .section-header h3 { font-size: 14px; font-weight: 600; color: #ccc; }
+  #variant-b .section-header .step { font-size: 11px; color: #6c63ff; background: #2a2a5a; padding: 2px 10px; border-radius: 10px; }
+  #variant-b .video-section { padding: 0; }
+  #variant-b .video-section .mock-video { height: 360px; border-radius: 0; }
+  #variant-b .timeline-section { background: #16163a; }
+  #variant-b .timeline-section .timeline { height: 12px; border-radius: 6px; margin: 8px 0; }
+  #variant-b .timeline-section .timeline .marker-dot { top: -2px; }
+  #variant-b .timeline-section .timeline-marks { display: flex; gap: 16px; margin-top: 10px; }
+  #variant-b .timeline-section .timeline-marks .mark-info { font-size: 11px; color: #888; display: flex; gap: 6px; align-items: center; }
+  #variant-b .controls-section { display: flex; gap: 12px; align-items: center; background: #12122e; }
+  #variant-b .controls-section .time { font-size: 12px; color: #888; font-variant-numeric: tabular-nums; }
+  #variant-b .marker-section { }
+  #variant-b .marker-cards { display: flex; flex-direction: column; gap: 8px; }
+  #variant-b .marker-card { display: flex; gap: 16px; padding: 12px 16px; background: #1e1e42; border-radius: 8px; align-items: center; border: 1px solid #2a2a4e; }
+  #variant-b .marker-card .time-badge { font-size: 12px; font-weight: 600; color: #6c63ff; min-width: 70px; font-variant-numeric: tabular-nums; }
+  #variant-b .marker-card .info { flex: 1; }
+  #variant-b .marker-card .info .title { font-size: 13px; font-weight: 500; }
+  #variant-b .marker-card .info .note { font-size: 11px; color: #888; margin-top: 2px; }
+  #variant-b .marker-card .actions { display: flex; gap: 6px; }
+  #variant-b .detail-section { background: #16163a; }
+  #variant-b .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  #variant-b .detail-grid .field label { display: block; font-size: 11px; color: #888; margin-bottom: 4px; }
+  #variant-b .detail-grid .field input, #variant-b .detail-grid .field textarea { width: 100%; background: #1e1e42; border: 1px solid #333366; border-radius: 4px; padding: 6px 10px; color: #eee; font-size: 12px; }
+  #variant-b .detail-grid .field textarea { height: 60px; resize: none; }
+  #variant-b .detail-grid .field.full { grid-column: 1 / -1; }
+  #variant-b .export-section { display: flex; gap: 16px; align-items: center; background: #12122e; }
+  #variant-b .export-section .progress-bar { flex: 1; height: 6px; background: #2a2a4a; border-radius: 3px; max-width: 300px; }
+  #variant-b .export-section .progress-bar .fill { height: 100%; background: #6c63ff; border-radius: 3px; width: 65%; }
+
+  /* ══════════════════════════════════════════════════════════════
+     VARIANT C — Panel / Collapsible tab layout
+     ══════════════════════════════════════════════════════════════ */
+  #variant-c { flex-direction: column; }
+  #variant-c .menu { height: 36px; background: transparent; display: flex; align-items: center; padding: 0 16px; gap: 16px; position: absolute; top: 0; left: 0; right: 0; z-index: 5; }
+  #variant-c .menu .logo { font-weight: 700; color: #6c63ff; font-size: 14px; }
+  #variant-c .menu .item { color: rgba(255,255,255,0.5); font-size: 12px; }
+  #variant-c .body { display: flex; flex: 1; overflow: hidden; position: relative; }
+  #variant-c .main-area { flex: 1; display: flex; flex-direction: column; }
+  #variant-c .main-area .mock-video { flex: 1; min-height: 0; }
+  #variant-c .main-area .bottom-controls { padding: 10px 16px; display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); }
+  #variant-c .main-area .bottom-controls .time { font-size: 11px; color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
+  #variant-c .main-area .bottom-controls .timeline { flex: 1; }
+  #variant-c .right-panel { width: 340px; background: rgba(22,22,58,0.95); backdrop-filter: blur(12px); border-left: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; }
+  #variant-c .right-panel .tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0; }
+  #variant-c .right-panel .tabs .tab { flex: 1; padding: 12px 0; text-align: center; font-size: 12px; color: #888; cursor: pointer; border-bottom: 2px solid transparent; transition: .15s; }
+  #variant-c .right-panel .tabs .tab.active { color: #6c63ff; border-bottom-color: #6c63ff; }
+  #variant-c .right-panel .tabs .tab:hover { color: #ccc; }
+  #variant-c .right-panel .panel-content { flex: 1; overflow-y: auto; padding: 12px 16px; }
+  #variant-c .right-panel .panel-content .empty { text-align: center; color: #555; font-size: 13px; padding: 40px 0; }
+  #variant-c .right-panel .panel-content .marker-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center; }
+  #variant-c .right-panel .panel-content .marker-item .mbadge { width: 28px; height: 28px; border-radius: 6px; background: #2a2a5a; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #6c63ff; flex-shrink: 0; }
+  #variant-c .right-panel .panel-content .marker-item .minfo { flex: 1; min-width: 0; }
+  #variant-c .right-panel .panel-content .marker-item .minfo .mtitle { font-size: 13px; font-weight: 500; }
+  #variant-c .right-panel .panel-content .marker-item .minfo .mtime { font-size: 11px; color: #888; }
+  #variant-c .right-panel .panel-content .marker-item .mstatus { font-size: 10px; }
+  #variant-c .export-overlay { display: none; position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; background: rgba(18,18,46,0.95); backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,0.08); }
+  #variant-c .export-overlay.show { display: flex; align-items: center; gap: 16px; }
+  #variant-c .export-overlay .progress-bar { flex: 1; height: 6px; background: #2a2a4a; border-radius: 3px; }
+  #variant-c .export-overlay .progress-bar .fill { height: 100%; background: #6c63ff; border-radius: 3px; width: 0%; }
+
+  /* ══════════════════════════════════════════════════════════════
+     RESPONSIVE
+     ══════════════════════════════════════════════════════════════ */
+  @media (max-width: 900px) {
+    #variant-a .body { flex-direction: column; }
+    #variant-a .left-pane { width: 100%; height: 50%; }
+    #variant-b .detail-grid { grid-template-columns: 1fr; }
+    #variant-c .right-panel { width: 280px; }
+  }
+  @media (max-width: 600px) {
+    #variant-c .right-panel { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     VARIANT A — Three-column layout
+     ══════════════════════════════════════════════════════════════ -->
+<div id="variant-a" class="variant active">
+  <div class="menu">
+    <span class="logo">ClipMark</span>
+    <span class="item">文件</span>
+    <span class="item">项目</span>
+    <span class="item">工具</span>
+    <span class="item" style="margin-left:auto;color:#555;">v0.1 PROTOTYPE</span>
+  </div>
+  <div class="body">
+    <div class="left-pane">
+      <div class="mock-video"><span style="position:relative;z-index:1;">clipmark_demo.mp4</span></div>
+      <div class="controls">
+        <button class="btn btn-secondary btn-sm">⏮</button>
+        <button class="btn btn-primary btn-sm">▶</button>
+        <button class="btn btn-secondary btn-sm">⏭</button>
+        <span class="time">01:23 / 10:30</span>
+        <span style="flex:1;"></span>
+        <button class="btn btn-secondary btn-sm" style="color:#ff6b6b;">+ 标记</button>
+      </div>
+      <div class="timeline-wrap">
+        <div class="timeline">
+          <div class="progress" style="width:13%;"></div>
+          <div class="marker-dot" style="left:8%;"></div>
+          <div class="marker-dot" style="left:20%;"></div>
+          <div class="marker-dot" style="left:45%;"></div>
+          <div class="marker-dot" style="left:72%;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="right-pane">
+      <div class="toolbar">
+        <span style="font-size:13px;font-weight:500;">📌 标记列表</span>
+        <span class="count">共 4 个标记</span>
+      </div>
+      <div class="marker-table">
+        <table>
+          <thead><tr><th>#</th><th>名称</th><th>起始</th><th>结束</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr class="selected"><td>1</td><td>高潮片段</td><td>00:48</td><td>02:15</td><td><span class="tag tag-green">已配音</span></td></tr>
+            <tr><td>2</td><td>搞笑对话</td><td>03:30</td><td>04:45</td><td><span class="tag tag-yellow">待配音</span></td></tr>
+            <tr><td>3</td><td>精彩打斗</td><td>05:10</td><td>07:00</td><td><span class="tag tag-gray">待生成</span></td></tr>
+            <tr><td>4</td><td>情感高潮</td><td>08:20</td><td>09:50</td><td><span class="tag tag-green">已配音</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="detail-panel">
+        <div class="row">
+          <label>名称</label>
+          <input type="text" value="高潮片段">
+        </div>
+        <div class="row">
+          <label>备注</label>
+          <textarea rows="2">男主发现真相时的表情变化很到位，配合背景音乐感染力很强</textarea>
+        </div>
+        <div class="row" style="flex-wrap:wrap;">
+          <label>解说词</label>
+          <div class="ai-row" style="flex:1;">
+            <input type="text" value="这一刻，男主终于看清了所有的真相...他的眼神从震惊到愤怒再到坚定" readonly style="flex:1;">
+            <button class="btn btn-primary btn-sm">🤖 生成</button>
+            <button class="btn btn-secondary btn-sm">✏️</button>
+          </div>
+        </div>
+        <div class="row">
+          <label>口播</label>
+          <div class="ai-row">
+            <span class="tag tag-green" style="margin-right:8px;">✅ 已生成</span>
+            <button class="btn btn-secondary btn-sm">🔊 预览</button>
+            <button class="btn btn-secondary btn-sm">🔄 重新生成</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="export-bar">
+    <button class="btn btn-primary">📤 批量导出</button>
+    <span style="font-size:12px;color:#888;">输出目录: ~/Desktop/clips/</span>
+    <span style="flex:1;"></span>
+    <span style="font-size:11px;color:#888;">进度 0/4</span>
+    <div class="progress-bar"><div class="fill"></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     VARIANT B — Top-down linear workflow
+     ══════════════════════════════════════════════════════════════ -->
+<div id="variant-b" class="variant">
+  <div class="menu">
+    <span class="logo">ClipMark</span>
+    <span class="item active">视频</span>
+    <span class="item">标记</span>
+    <span class="item">AI</span>
+    <span class="item">导出</span>
+    <span class="item" style="margin-left:auto;color:#555;">v0.1 · PROTOTYPE</span>
+  </div>
+
+  <div class="section video-section">
+    <div class="mock-video" style="height:340px;"><span style="position:relative;z-index:1;">clipmark_demo.mp4</span></div>
+  </div>
+
+  <div class="section controls-section">
+    <button class="btn btn-secondary btn-sm">⏮</button>
+    <button class="btn btn-primary">▶ 播放</button>
+    <button class="btn btn-secondary btn-sm">⏭</button>
+    <span class="time">01:23 / 10:30</span>
+    <span style="flex:1;"></span>
+    <button class="btn btn-secondary" style="color:#ff6b6b;">+ 添加标记</button>
+  </div>
+
+  <div class="section timeline-section">
+    <div class="section-header">
+      <h3>时间轴</h3>
+      <span class="step">步骤 1/4</span>
+    </div>
+    <div class="timeline">
+      <div class="progress" style="width:13%;"></div>
+      <div class="marker-dot" style="left:8%;"></div>
+      <div class="marker-dot" style="left:20%;"></div>
+      <div class="marker-dot" style="left:45%;"></div>
+      <div class="marker-dot" style="left:72%;"></div>
+    </div>
+    <div class="timeline-marks">
+      <span class="mark-info"><span style="color:#ff6b6b;">●</span> 00:48 — 高潮</span>
+      <span class="mark-info"><span style="color:#ff6b6b;">●</span> 03:30 — 笑点</span>
+      <span class="mark-info"><span style="color:#ff6b6b;">●</span> 05:10 — 打斗</span>
+      <span class="mark-info"><span style="color:#ff6b6b;">●</span> 08:20 — 情感</span>
+    </div>
+  </div>
+
+  <div class="section marker-section">
+    <div class="section-header">
+      <h3>📌 标记列表</h3>
+      <span class="step">步骤 2/4</span>
+    </div>
+    <div class="marker-cards">
+      <div class="marker-card">
+        <span class="time-badge">00:48 — 02:15</span>
+        <div class="info">
+          <div class="title">高潮片段</div>
+          <div class="note">男主发现真相时的表情变化</div>
+        </div>
+        <div class="actions">
+          <span class="tag tag-green">已配音</span>
+          <button class="btn btn-secondary btn-sm">✏️</button>
+        </div>
+      </div>
+      <div class="marker-card" style="border-color:#3a3a6a;">
+        <span class="time-badge">03:30 — 04:45</span>
+        <div class="info">
+          <div class="title">搞笑对话</div>
+          <div class="note">两个配角之间的经典互怼</div>
+        </div>
+        <div class="actions">
+          <span class="tag tag-yellow">待配音</span>
+          <button class="btn btn-secondary btn-sm">✏️</button>
+        </div>
+      </div>
+      <div class="marker-card" style="border-color:#3a3a6a;">
+        <span class="time-badge">05:10 — 07:00</span>
+        <div class="info">
+          <div class="title">精彩打斗</div>
+          <div class="note">一镜到底的动作场面</div>
+        </div>
+        <div class="actions">
+          <span class="tag tag-gray">待生成</span>
+          <button class="btn btn-secondary btn-sm">✏️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section detail-section">
+    <div class="section-header">
+      <h3>✏️ 编辑标记 — 高潮片段</h3>
+      <span class="step">步骤 3/4</span>
+    </div>
+    <div class="detail-grid">
+      <div class="field">
+        <label>名称</label>
+        <input type="text" value="高潮片段">
+      </div>
+      <div class="field">
+        <label>时间区间</label>
+        <input type="text" value="00:48 — 02:15" readonly style="opacity:.6;">
+      </div>
+      <div class="field full">
+        <label>备注（AI 生成解说词用）</label>
+        <textarea>男主发现真相时的表情变化很到位，配合背景音乐感染力很强</textarea>
+      </div>
+      <div class="field full">
+        <label>AI 解说词</label>
+        <div style="display:flex;gap:8px;">
+          <textarea readonly style="flex:1;">这一刻，男主终于看清了所有的真相...他的眼神从震惊到愤怒再到坚定</textarea>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button class="btn btn-primary btn-sm">🤖 生成</button>
+            <button class="btn btn-secondary btn-sm">🔊 试听</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section export-section">
+    <span style="font-size:13px;font-weight:500;">📤 批量导出</span>
+    <button class="btn btn-primary">开始导出</button>
+    <span style="font-size:12px;color:#888;">输出: ~/Desktop/clips/</span>
+    <span style="flex:1;"></span>
+    <span style="font-size:11px;color:#888;">已完成 2/4</span>
+    <div class="progress-bar"><div class="fill" style="width:50%;"></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     VARIANT C — Panel / Collapsible tab layout
+     ══════════════════════════════════════════════════════════════ -->
+<div id="variant-c" class="variant">
+  <div class="menu">
+    <span class="logo">ClipMark</span>
+    <span style="flex:1;"></span>
+    <button class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,0.08);">⚙️</button>
+  </div>
+  <div class="body">
+    <div class="main-area">
+      <div class="mock-video"><span style="position:relative;z-index:1;">clipmark_demo.mp4</span></div>
+      <div class="bottom-controls">
+        <button class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,0.08);">⏮</button>
+        <button class="btn btn-primary btn-sm">▶</button>
+        <button class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,0.08);">⏭</button>
+        <span class="time">01:23 / 10:30</span>
+        <div class="timeline">
+          <div class="progress" style="width:13%;"></div>
+          <div class="marker-dot" style="left:8%;"></div>
+          <div class="marker-dot" style="left:20%;"></div>
+          <div class="marker-dot" style="left:45%;"></div>
+          <div class="marker-dot" style="left:72%;"></div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,0.08);color:#ff6b6b;">+</button>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="tabs">
+        <div class="tab active" data-tab="marks" onclick="switchTab(this)">标记</div>
+        <div class="tab" data-tab="ai" onclick="switchTab(this)">AI</div>
+        <div class="tab" data-tab="export" onclick="switchTab(this)">导出</div>
+      </div>
+      <div class="panel-content" id="tab-marks">
+        <div class="marker-item">
+          <div class="mbadge">1</div>
+          <div class="minfo">
+            <div class="mtitle">高潮片段</div>
+            <div class="mtime">00:48 — 02:15</div>
+          </div>
+          <span class="mstatus tag tag-green">已配音</span>
+        </div>
+        <div class="marker-item" onclick="this.style.borderColor='#6c63ff'" style="cursor:pointer;">
+          <div class="mbadge">2</div>
+          <div class="minfo">
+            <div class="mtitle">搞笑对话</div>
+            <div class="mtime">03:30 — 04:45</div>
+          </div>
+          <span class="mstatus tag tag-yellow">待配音</span>
+        </div>
+        <div class="marker-item" onclick="this.style.borderColor='#6c63ff'" style="cursor:pointer;">
+          <div class="mbadge">3</div>
+          <div class="minfo">
+            <div class="mtitle">精彩打斗</div>
+            <div class="mtime">05:10 — 07:00</div>
+          </div>
+          <span class="mstatus tag tag-gray">待生成</span>
+        </div>
+        <div class="marker-item" onclick="this.style.borderColor='#6c63ff'" style="cursor:pointer;">
+          <div class="mbadge">4</div>
+          <div class="minfo">
+            <div class="mtitle">情感高潮</div>
+            <div class="mtime">08:20 — 09:50</div>
+          </div>
+          <span class="mstatus tag tag-green">已配音</span>
+        </div>
+      </div>
+      <div class="panel-content" id="tab-ai" style="display:none;">
+        <div style="margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:500;margin-bottom:8px;">AI 配置</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input placeholder="API Endpoint" value="https://api.openai.com/v1" style="background:#1e1e42;border:1px solid #333;border-radius:4px;padding:6px 10px;color:#eee;font-size:12px;">
+            <input placeholder="API Key" value="sk-..." type="password" style="background:#1e1e42;border:1px solid #333;border-radius:4px;padding:6px 10px;color:#eee;font-size:12px;">
+            <div style="display:flex;gap:8px;">
+              <input placeholder="Model" value="gpt-4o" style="flex:1;background:#1e1e42;border:1px solid #333;border-radius:4px;padding:6px 10px;color:#eee;font-size:12px;">
+              <input placeholder="Temp" value="0.7" style="width:60px;background:#1e1e42;border:1px solid #333;border-radius:4px;padding:6px 10px;color:#eee;font-size:12px;">
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:500;margin-bottom:8px;">当前标记解说词</div>
+          <textarea style="width:100%;height:80px;background:#1e1e42;border:1px solid #333;border-radius:4px;padding:8px;color:#eee;font-size:12px;resize:none;" readonly>这一刻，男主终于看清了所有的真相...他的眼神从震惊到愤怒再到坚定</textarea>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="btn btn-primary" style="flex:1;padding:8px;">🤖 生成解说词</button>
+            <button class="btn btn-secondary">🔊 试听</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel-content" id="tab-export" style="display:none;">
+        <div class="empty" style="text-align:left;padding:0;margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:500;margin-bottom:8px;">导出设置</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span style="font-size:12px;color:#888;flex-shrink:0;">输出目录</span>
+              <input value="~/Desktop/clips/" style="flex:1;background:#1e1e42;border:1px solid #333;border-radius:4px;padding:6px 10px;color:#eee;font-size:12px;">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span style="font-size:12px;color:#888;flex-shrink:0;">格式</span>
+              <select style="flex:1;background:#1e1e42;border:1px solid #333;border-radius:4px;padding:6px 10px;color:#eee;font-size:12px;">
+                <option>MP4 (H.264)</option>
+                <option>MOV</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;padding:10px;">📤 批量导出 4 个片段</button>
+        <div style="margin-top:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:4px;">
+            <span>导出进度</span><span>0 / 4</span>
+          </div>
+          <div class="progress-bar"><div class="fill"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="export-overlay show" id="export-overlay">
+    <span style="font-size:12px;font-weight:500;">导出中</span>
+    <span style="font-size:11px;color:#888;">高潮片段.mp4</span>
+    <div class="progress-bar"><div class="fill" style="width:45%;"></div></div>
+    <span style="font-size:11px;color:#888;">2 / 4</span>
+    <button class="btn btn-secondary btn-sm">取消</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     FLOATING SWITCHER
+     ══════════════════════════════════════════════════════════════ -->
+<div class="switcher">
+  <button onclick="prevVariant()" title="上一个变体">◀</button>
+  <span class="label"><span id="variant-label">A — 三栏布局</span> <span class="badge" id="variant-num">1/3</span></span>
+  <button onclick="nextVariant()" title="下一个变体">▶</button>
+</div>
+
+<script>
+  /* ═══════════════════════════════════════════════════════════
+     VARIANT SWITCHER
+     ═══════════════════════════════════════════════════════════ */
+  const variants = ['variant-a', 'variant-b', 'variant-c'];
+  const labels  = ['A — 三栏布局', 'B — 自上而下工作流', 'C — 面板式布局'];
+  let current = 0;
+
+  function showVariant(idx) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById(variants[idx]).classList.add('active');
+    document.getElementById('variant-label').textContent = labels[idx];
+    document.getElementById('variant-num').textContent = `${idx+1}/3`;
+    current = idx;
+  }
+
+  function nextVariant() { showVariant((current + 1) % 3); }
+  function prevVariant() { showVariant((current + 2) % 3); }
+
+  /* Tab switching for variant C */
+  function switchTab(el) {
+    const panel = el.closest('.right-panel');
+    panel.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const tab = el.dataset.tab;
+    panel.querySelectorAll('.panel-content').forEach(p => p.style.display = 'none');
+    document.getElementById('tab-' + tab).style.display = 'block';
+  }
+
+  /* Keyboard navigation */
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); prevVariant(); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); nextVariant(); }
+  });
+</script>
+<p style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.2);font-size:11px;z-index:9998;text-align:center;">← → 键盘切换  ·  底部浮栏切换变体  ·  纯视觉原型，非交互式</p>
+</body>
+</html>

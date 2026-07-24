@@ -1,0 +1,14 @@
+[project]
+name = "clipmark"
+version = "0.1.0"
+description = "视频剪辑标记与 AI 解说词工具"
+requires-python = ">=3.10"
+dependencies = [
+    "PyQt5>=5.15,<5.16",
+    "pydantic>=2.0",
+    "openai>=1.0",
+    "edge-tts>=6.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

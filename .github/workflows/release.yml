@@ -27,17 +27,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python 3.12
-        if: runner.os != 'macOS'
+        if: runner.os != 'macOS' || (runner.os == 'macOS' && matrix.os_arch == 'arm64')
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Set up Python 3.12 (${{ matrix.os_arch }})
-        if: runner.os == 'macOS'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          architecture: ${{ matrix.os_arch }}
 
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
@@ -58,13 +51,27 @@ jobs:
             libxcb-xv0
 
       - name: Install dependencies
+        if: runner.os != 'macOS' || (runner.os == 'macOS' && matrix.os_arch == 'arm64')
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
           pip install -e .
 
       - name: Build package
+        if: runner.os != 'macOS' || (runner.os == 'macOS' && matrix.os_arch == 'arm64')
         run: pyinstaller ClipMark.spec
+
+      - name: Build x86_64 macOS package (via Rosetta)
+        if: runner.os == 'macOS' && matrix.os_arch == 'x86_64'
+        run: |
+          # Install x86_64-capable Python from python.org (universal2 binary)
+          curl -sL -o /tmp/python3.pkg "https://www.python.org/ftp/python/3.12.5/python-3.12.5-macos11.pkg"
+          sudo installer -pkg /tmp/python3.pkg -target /
+          # Install deps and build under Rosetta
+          arch -x86_64 /usr/local/bin/python3 -m pip install --upgrade pip
+          arch -x86_64 /usr/local/bin/python3 -m pip install pyinstaller
+          arch -x86_64 /usr/local/bin/python3 -m pip install -e .
+          arch -x86_64 /usr/local/bin/python3 -m PyInstaller ClipMark.spec
 
       - name: Create archive (macOS)
         if: runner.os == 'macOS'

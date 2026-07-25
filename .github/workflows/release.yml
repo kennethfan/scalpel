@@ -13,7 +13,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        include:
+          - os: macos-latest
+            os_arch: arm64
+          - os: macos-latest
+            os_arch: x86_64
+          - os: windows-latest
+          - os: ubuntu-latest
 
     runs-on: ${{ matrix.os }}
 
@@ -21,9 +27,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python 3.12
+        if: runner.os != 'macOS'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Set up Python 3.12 (${{ matrix.os_arch }})
+        if: runner.os == 'macOS'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: ${{ matrix.os_arch }}
 
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
@@ -56,7 +70,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           cd dist
-          zip -r ClipMark-macOS-${{ github.ref_name }}.zip ClipMark.app
+          zip -r ClipMark-macOS-${{ matrix.os_arch }}-${{ github.ref_name }}.zip ClipMark.app
 
       - name: Create archive (Windows)
         if: runner.os == 'Windows'
@@ -75,7 +89,7 @@ jobs:
         shell: bash
         run: |
           case "${{ runner.os }}" in
-            macOS)  echo "path=dist/ClipMark-macOS-${{ github.ref_name }}.zip" >> "$GITHUB_OUTPUT" ;;
+            macOS)  echo "path=dist/ClipMark-macOS-${{ matrix.os_arch }}-${{ github.ref_name }}.zip" >> "$GITHUB_OUTPUT" ;;
             Windows) echo "path=dist/ClipMark-Windows-${{ github.ref_name }}.zip" >> "$GITHUB_OUTPUT" ;;
             Linux)  echo "path=dist/ClipMark-Linux-${{ github.ref_name }}.tar.gz" >> "$GITHUB_OUTPUT" ;;
           esac
